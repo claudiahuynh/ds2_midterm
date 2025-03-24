@@ -1,0 +1,35 @@
+---
+title: "DS2_midterm"
+author: "My An Huynh, Soomin You"
+date: "2025-03-24"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(MASS)
+library(caret)
+```
+
+## Load Data
+```{r}
+load("data/dat1.RData")
+load("data/dat2.RData")
+```
+
+## Summary Statistics 
+## Exploratory Data Analysis 
+```{r}
+train = dat1 |> 
+  dplyr::select(-id) 
+
+test = dat2 |> 
+  dplyr::select(-id)
+```
+
+
+## Model training 
+
+## Model validation 
+
+## Conclusion 
