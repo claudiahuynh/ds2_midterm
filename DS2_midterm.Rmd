@@ -10,7 +10,6 @@ library(tidyverse)
 library(MASS)
 library(caret)
 library(corrplot)
-library(pROC)
 library(mgcv)
 ```
 
@@ -65,6 +64,11 @@ ggplot(aes(x = factor(smoking), y = log_antibody), data = train) +
 
 corrplot(cor(x), method = "circle", type = "full")
 
+test = dat2 |> 
+  dplyr::select(-id)
+
+x_test = model.matrix(log_antibody ~ ., data = test)[, -1]
+y_test = train$log_antibody
 ```
 
 
@@ -72,13 +76,24 @@ corrplot(cor(x), method = "circle", type = "full")
 1) elastic net  
 2) MARS 
 3) PCR
-
 4) GAM
-5) smoothing splines 
+5) PLS
+
+```{r pcr}
+# pcr model 
+pcr_mod = train(x = x,
+                y = y, 
+                method = "pcr", 
+                tuneGrid = data.frame(ncomp = 1:15), 
+                trControl = ctrl1, 
+                preProcess = c("center", "scale"))
+summary(pcr_mod)
+```
 
 
 ```{r gam}
 set.seed(1)
+# gam model 
 ctrl1 = trainControl(method = "cv", number = 10)
 
 gam_mod = train(x = x, 
@@ -92,7 +107,26 @@ gam_mod$finalModel
 summary(gam_mod)
 ```
 
-```{r}
+
+```{r pls}
+set.seed(1)
+# pls model 
+pls_mod = train(x = x,
+                y = y, 
+                method = "pls", 
+                tuneGrid = data.frame(ncomp = 1:15), 
+                trControl = ctrl1, 
+                preProcess = c("center", "scale"))
+summary(pls_mod)
+
+# test error 
+pred_pls = predict(pls_mod, newdata = x_test)
+mean((y_test - pred_pls)^2)
+
+ggplot(pls_mod, highlight = TRUE)
+```
+
+```{r elastic_net}
 set.seed(1)
 enet_mod = train(log_antibody ~ ., 
                  data = train,
@@ -104,7 +138,7 @@ enet_mod = train(log_antibody ~ .,
 enet_mod$bestTune
 ```
 
-```{r}
+```{r mars}
 set.seed(1)
 mars_mod = train(x = x, 
                  y = y, 
@@ -119,11 +153,16 @@ summary(mars_mod)
 ## Model validation 
 6) comparison 
 ```{r}
-bwplot(resamples(list(MARS = mars_mod, 
+resamp = resamples(list(MARS = mars_mod, 
                       GAM = gam_mod,
-                      enet = enet_mod)),
-       metric = "RMSE")
+                      enet = enet_mod, 
+                      pls = pls_mod))
+       
+summary(resamp)
+bwplot(resamp, metric = "RMSE")
 ```
+
+
 
 ## Conclusion 
 
