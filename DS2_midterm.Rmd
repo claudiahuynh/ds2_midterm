@@ -1,7 +1,7 @@
 ---
 title: "DS2_midterm"
 author: "My An Huynh, Soomin You"
-date: "2025-03-24"
+date: "`r Sys.Date()`"
 output: github_document
 ---
 
@@ -9,6 +9,9 @@ output: github_document
 library(tidyverse)
 library(MASS)
 library(caret)
+library(corrplot)
+library(pROC)
+library(mgcv)
 ```
 
 ## Load Data
@@ -20,8 +23,34 @@ load("data/dat2.RData")
 ## Summary Statistics 
 ## Exploratory Data Analysis 
 ```{r}
-train = dat1 |> 
-  dplyr::select(-id) 
+train = dat1 |>
+  dplyr::select(-id)
+
+
+train2 = dat1 |> 
+  dplyr::select(-id) |>
+  mutate(
+    gender = as.numeric(gender), 
+    race = as.numeric(race), 
+    smoking = as.numeric(smoking), 
+    diabetes = as.numeric(diabetes)
+  )
+  
+
+x = model.matrix(log_antibody ~ ., data = train)[, -1]
+y = train$log_antibody
+
+x2 = model.matrix(log_antibody ~ ., data = train2)[, -1]
+y2 = train2$log_antibody
+
+featurePlot(x = x2, y = y2, plot = "scatter")
+
+# check boxplot 
+#featurePlot(x = x2, y = train$log_antibody,
+            plot = "box")
+
+
+corrplot(cor(x), method = "circle", type = "full")
 
 test = dat2 |> 
   dplyr::select(-id)
@@ -29,7 +58,29 @@ test = dat2 |>
 
 
 ## Model training 
+1) elastic net  
+2) MARS 
+3) PCR
+
+4) GAM
+5) smoothing splines 
+
+
+```{r gam}
+set.seed(1)
+ctrl1 = trainControl(method = "cv", number = 10)
+
+gam_mod = train(x = x, 
+                y = y, 
+                method = "gam", 
+                trControl = ctrl1)
+
+gam_mod$bestTune
+gam_mod$finalModel
+```
 
 ## Model validation 
+6) comparison 
 
 ## Conclusion 
+
