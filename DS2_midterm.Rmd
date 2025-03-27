@@ -11,6 +11,7 @@ library(MASS)
 library(caret)
 library(corrplot)
 library(mgcv)
+library(patchwork)
 ```
 
 ## Load Data
@@ -21,63 +22,93 @@ load("data/dat2.RData")
 
 ## Summary Statistics 
 ## Exploratory Data Analysis 
-```{r}
+```{r eda}
+#train data 
 train = dat1 |>
   dplyr::select(-id)
-
-
-test = dat2 |> 
-  dplyr::select(-id)
-
-train2 = dat1 |> 
-  dplyr::select(-id) |>
-  mutate(
-    gender = as.numeric(gender), 
-    race = as.numeric(race), 
-    smoking = as.numeric(smoking), 
-    diabetes = as.numeric(diabetes)
-  )
-  
 
 x = model.matrix(log_antibody ~ ., data = train)[, -1]
 y = train$log_antibody
 
-x2 = model.matrix(log_antibody ~ ., data = train2)[, -1]
-y2 = train2$log_antibody
-
-featurePlot(x = train[, -c(2,3,4,8,9, 13)], y = train$log_antibody, plot = "scatter")
-
-#  boxplot for factor/binary variables 
-ggplot(aes(x = factor(gender), y = log_antibody), data = train) + 
-  geom_boxplot()
-ggplot(aes(x = factor(race), y = log_antibody), data = train) + 
-  geom_boxplot()
-ggplot(aes(x = factor(race), y = log_antibody), data = train) + 
-  geom_boxplot()
-ggplot(aes(x = factor(diabetes), y = log_antibody), data = train) + 
-  geom_boxplot()
-ggplot(aes(x = factor(hypertension), y = log_antibody), data = train) + 
-  geom_boxplot()
-ggplot(aes(x = factor(smoking), y = log_antibody), data = train) + 
-  geom_boxplot()
-
-
-corrplot(cor(x), method = "circle", type = "full")
-
+#test data 
 test = dat2 |> 
   dplyr::select(-id)
 
 x_test = model.matrix(log_antibody ~ ., data = test)[, -1]
 y_test = train$log_antibody
+
+# visualization of the train data 
+featurePlot(x = train[, -c(2,3,4,8,9, 13)], y = train$log_antibody, plot = "scatter")
+
+# boxplot for factor/binary variables 
+p1 = ggplot(aes(x = factor(gender), y = log_antibody), data = train) + 
+  geom_boxplot()
+p2 = ggplot(aes(x = factor(race), y = log_antibody), data = train) + 
+  geom_boxplot()
+p3 = ggplot(aes(x = factor(race), y = log_antibody), data = train) + 
+  geom_boxplot()
+p4 = ggplot(aes(x = factor(diabetes), y = log_antibody), data = train) + 
+  geom_boxplot()
+p5 = ggplot(aes(x = factor(hypertension), y = log_antibody), data = train) + 
+  geom_boxplot()
+p6 = ggplot(aes(x = factor(smoking), y = log_antibody), data = train) + 
+  geom_boxplot()
+p1 + p2 + p3 + p4 + p5 + p6
+
+corrplot(cor(x), method = "circle", type = "full")
 ```
+
+Both the train data and the test data were loaded and separated into response variable and predictor variable matrices. Scatterplots were made for the numeric predictor variables and boxplots were made for the factor or binary variables. 
+
+Correlation plot was also checked and no multicolinearity was observed. 
 
 
 ## Model training 
-1) elastic net  
-2) MARS 
-3) PCR
-4) GAM
-5) PLS
+To find an optimal prediction model of antibody levels that show the impact of the demographic and clinical factors, we decide to build various models and compare. We use elastic net, MARS, GAM, PCR and PLS models as shown below. 
+
+```{r elastic net}
+ctrl1 = trainControl(method = "cv", number = 10)
+
+# elastic net 
+set.seed(1)
+enet_mod = train(log_antibody ~ ., 
+                 data = train,
+                 method = "glmnet", 
+                 tuneGrid = expand.grid(alpha = seq(0, 1, length = 21), 
+                                        lambda = exp(seq(6, 0, length = 100))),
+                 trControl = ctrl1)
+
+enet_mod$bestTune
+```
+Maybe describe how we determined the tuning grid range for lambda...? 
+
+
+```{r}
+# mars
+set.seed(1)
+mars_mod = train(x = x, 
+                 y = y, 
+                 method = "earth", 
+                 trControl = ctrl1)
+
+summary(mars_mod)
+```
+
+
+```{r}
+# gam  
+set.seed(1)
+gam_mod = train(x = x, 
+                y = y, 
+                method = "gam", 
+                trControl = ctrl1)
+
+gam_mod$bestTune
+gam_mod$finalModel
+
+summary(gam_mod)
+```
+
 
 ```{r pcr}
 # pcr model 
@@ -88,23 +119,6 @@ pcr_mod = train(x = x,
                 trControl = ctrl1, 
                 preProcess = c("center", "scale"))
 summary(pcr_mod)
-```
-
-
-```{r gam}
-set.seed(1)
-# gam model 
-ctrl1 = trainControl(method = "cv", number = 10)
-
-gam_mod = train(x = x, 
-                y = y, 
-                method = "gam", 
-                trControl = ctrl1)
-
-gam_mod$bestTune
-gam_mod$finalModel
-
-summary(gam_mod)
 ```
 
 
@@ -126,43 +140,23 @@ mean((y_test - pred_pls)^2)
 ggplot(pls_mod, highlight = TRUE)
 ```
 
-```{r elastic_net}
-set.seed(1)
-enet_mod = train(log_antibody ~ ., 
-                 data = train,
-                 method = "glmnet", 
-                 tuneGrid = expand.grid(alpha = seq(0, 1, length = 21), 
-                                        lambda = exp(seq(6, 0, length = 100))),
-                 trControl = ctrl1)
-
-enet_mod$bestTune
-```
-
-```{r mars}
-set.seed(1)
-mars_mod = train(x = x, 
-                 y = y, 
-                 method = "earth", 
-                 trControl = ctrl1)
-
-summary(mars_mod)
-```
-
 
 
 ## Model validation 
 6) comparison 
 ```{r}
-resamp = resamples(list(MARS = mars_mod, 
-                      GAM = gam_mod,
-                      enet = enet_mod, 
-                      pls = pls_mod))
-       
+resamp = resamples(list(enet = enet_mod, 
+                        MARS = mars_mod, 
+                        GAM = gam_mod,
+                        pcr = pcr_mod, 
+                        pls = pls_mod))
 summary(resamp)
 bwplot(resamp, metric = "RMSE")
 ```
 
 
 
+
 ## Conclusion 
 
+our best model is MARS since it has th elowest mean RMSE value. 
