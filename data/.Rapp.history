@@ -1,0 +1,22 @@
+load("/Users/soominyou/Documents/2_school/2_spring2025/BIST_P8106_DSII /DSII/ds2_midterm/data/dat1.RData")
+load("/Users/soominyou/Documents/2_school/2_spring2025/BIST_P8106_DSII /DSII/ds2_midterm/data/dat1.RData")
+library(nlme)
+library(nlme)
+library(nlme)
+library(ggplot2)
+library(ggplot2)
+library(nlme)#
+library(ggplot2)#
+library (lattice)#
+Orthodont<- read.table ("orthodontic.dat",header=TRUE)#
+head(Orthodont)#
+#
+Orth.new <- groupedData (distance ~ age | child,data = as.data.frame (Orthodont)) # not necessary for lme#
+head(Orth.new)#
+OrthFem <- subset(Orth.new, male==0)#
+OrthFem[1:5,]#
+plot(OrthFem) # default: ordered by max resp of each child#
+ggplot(Orth.new, aes(age, distance, group = child)) + #
+  geom_line() +#
+  geom_point() +#
+  theme_classic()

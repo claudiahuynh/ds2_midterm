@@ -66,9 +66,23 @@ Correlation plot was also checked and no multicolinearity was observed.
 ## Model training 
 To find an optimal prediction model of antibody levels that show the impact of the demographic and clinical factors, we decide to build various models and compare. We use elastic net, MARS, GAM, PCR and PLS models as shown below. 
 
-```{r elastic net}
+```{r linear}
+#linear
 ctrl1 = trainControl(method = "cv", number = 10)
 
+set.seed(1)
+linear_mod = train(x, y,
+                   method = "lm", 
+                   trControl = ctrl1)
+summary(linear_mod)
+
+# test error 
+pred_lm = predict(linear_mod, newdata = x_test)
+mean((y_test - pred_lm)^2)
+```
+
+
+```{r elastic net}
 # elastic net 
 set.seed(1)
 enet_mod = train(log_antibody ~ ., 
@@ -80,34 +94,8 @@ enet_mod = train(log_antibody ~ .,
 
 enet_mod$bestTune
 ```
+
 Maybe describe how we determined the tuning grid range for lambda...? 
-
-
-```{r}
-# mars
-set.seed(1)
-mars_mod = train(x = x, 
-                 y = y, 
-                 method = "earth", 
-                 trControl = ctrl1)
-
-summary(mars_mod)
-```
-
-
-```{r}
-# gam  
-set.seed(1)
-gam_mod = train(x = x, 
-                y = y, 
-                method = "gam", 
-                trControl = ctrl1)
-
-gam_mod$bestTune
-gam_mod$finalModel
-
-summary(gam_mod)
-```
 
 
 ```{r pcr}
@@ -120,7 +108,6 @@ pcr_mod = train(x = x,
                 preProcess = c("center", "scale"))
 summary(pcr_mod)
 ```
-
 
 ```{r pls}
 set.seed(1)
@@ -140,16 +127,43 @@ mean((y_test - pred_pls)^2)
 ggplot(pls_mod, highlight = TRUE)
 ```
 
+```{r}
+# mars
+set.seed(1)
+mars_mod = train(x = x, 
+                 y = y, 
+                 method = "earth", 
+                 trControl = ctrl1)
+
+summary(mars_mod)
+```
+
+```{r}
+# gam  
+set.seed(1)
+gam_mod = train(x = x, 
+                y = y, 
+                method = "gam", 
+                trControl = ctrl1)
+
+gam_mod$bestTune
+gam_mod$finalModel
+
+summary(gam_mod)
+```
+
 
 
 ## Model validation 
 6) comparison 
 ```{r}
-resamp = resamples(list(enet = enet_mod, 
-                        MARS = mars_mod, 
-                        GAM = gam_mod,
+set.seed(1)
+resamp = resamples(list(lm = linear_mod, 
+                        enet = enet_mod, 
                         pcr = pcr_mod, 
-                        pls = pls_mod))
+                        pls = pls_mod,                         
+                        MARS = mars_mod, 
+                        GAM = gam_mod))
 summary(resamp)
 bwplot(resamp, metric = "RMSE")
 ```
@@ -159,4 +173,4 @@ bwplot(resamp, metric = "RMSE")
 
 ## Conclusion 
 
-our best model is MARS since it has th elowest mean RMSE value. 
+our best model is MARS since it has the lowest mean RMSE value. 
