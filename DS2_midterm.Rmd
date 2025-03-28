@@ -12,6 +12,7 @@ library(caret)
 library(corrplot)
 library(mgcv)
 library(patchwork)
+library(ggplot2)
 ```
 
 ## Load Data
@@ -38,14 +39,24 @@ x_test = model.matrix(log_antibody ~ ., data = test)[, -1]
 y_test = test$log_antibody
 
 # visualization of the train data 
-featurePlot(x = train[, -c(2,3,4,8,9, 13)], 
+theme1 = trellis.par.get()
+theme1$plot.symbol$col = rgb(.2, .4, .2, .5)
+theme1$plot.symbol$pch = 16
+theme1$plot.line$col = rgb(.8, .1, .1, 1)
+theme1$plot.line$lwd = 2
+theme1$strip.background$col = rgb(.0, .2, .6, .2)
+trellis.par.set(theme1)
+
+featurePlot(x = train[, -c(2,3,4,8,9,13)], 
             y = train$log_antibody, 
             plot = "scatter", 
+            span = 0.5,
+            type = c("p", "smooth"), 
             labels = c("Predictors", "Log_antibody"))
 
 # boxplot for factor/binary variables 
 p1 = ggplot(aes(x = factor(gender), y = log_antibody), data = train) + 
-  geom_boxplot()
+  geom_boxplot() 
 p2 = ggplot(aes(x = factor(race), y = log_antibody), data = train) + 
   geom_boxplot()
 p3 = ggplot(aes(x = factor(diabetes), y = log_antibody), data = train) + 
@@ -54,7 +65,7 @@ p4 = ggplot(aes(x = factor(hypertension), y = log_antibody), data = train) +
   geom_boxplot()
 p5 = ggplot(aes(x = factor(smoking), y = log_antibody), data = train) + 
   geom_boxplot()
-p1 + p2 + p3 + p4 + p5 
+p1 + p2 + p3 + p4 + p5
 
 corrplot(cor(x), method = "circle", type = "full")
 ```
@@ -65,7 +76,7 @@ Correlation plot was also checked and no multicolinearity was observed.
 
 
 ## Model training 
-To find an optimal prediction model of antibody levels that show the impact of the demographic and clinical factors, we decide to build various models and compare. We use elastic net, MARS, GAM, PCR and PLS models as shown below. 
+To find an optimal prediction model of antibody levels that show the impact of the demographic and clinical factors, we decide to build various models and compare. We use linear, elastic net, PLS, MARS and GAM models as shown below. 
 
 ```{r linear}
 #linear
@@ -78,8 +89,10 @@ linear_mod = train(x, y,
 summary(linear_mod)
 
 # test error 
-pred_lm = predict(linear_mod, newdata = x_test)
-mean((y_test - pred_lm)^2)
+lm_pred = predict(linear_mod, newdata = x_test)
+lm_rmse = sqrt(mean((y_test - pred_lm)^2))
+
+cat("Test error for the linear model: ", lm_rmse, "\n")
 ```
 
 
@@ -93,26 +106,23 @@ enet_mod = train(x = x,
                                         lambda = exp(seq(-2, 2, length = 100))),
                  trControl = ctrl1)
 
-enet_mod$bestTune
+best_alpha = enet_mod$bestTune$alpha
+best_lambda = enet_mod$bestTune$lambda
+
+# test error 
+enet_pred = predict(enet_mod, newdata = x_test)
+enet_rmse = sqrt(mean((y_test - enet_pred)^2))
+
+cat("The optimal alpha for the elastic net model: ", best_alpha, "\n")
+cat("The optimal alpha for the elastic net model: ", best_lambda, "\n")
+cat("Test error for the linear model: ", enet_rmse, "\n")
 ```
 
 Maybe describe how we determined the tuning grid range for lambda...? 
 
-
-```{r pcr}
-# pcr model 
-pcr_mod = train(x = x,
-                y = y, 
-                method = "pcr", 
-                tuneGrid = data.frame(ncomp = 1:15), 
-                trControl = ctrl1, 
-                preProcess = c("center", "scale"))
-summary(pcr_mod)
-```
-
 ```{r pls}
+# pls model
 set.seed(1)
-# pls model 
 pls_mod = train(x = x,
                 y = y, 
                 method = "pls", 
@@ -122,8 +132,10 @@ pls_mod = train(x = x,
 summary(pls_mod)
 
 # test error 
-pred_pls = predict(pls_mod, newdata = x_test)
-mean((y_test - pred_pls)^2)
+pls_pred = predict(pls_mod, newdata = x_test)
+pls_rmse = sqrt(mean((y_test - pred_pls)^2))
+
+cat("Test error for the linear model: ", pls_rmse, "\n")
 
 ggplot(pls_mod, highlight = TRUE)
 ```
@@ -138,8 +150,11 @@ mars_mod = train(x = x,
 
 summary(mars_mod)
 
+# test error 
 mars_pred = predict(mars_mod, newdata = x_test)
 mars_rmse = sqrt(mean((y_test - mars_pred)^2))
+
+cat("Test error for the linear model: ", mars_rmse, "\n")
 ```
 
 ```{r}
@@ -154,6 +169,12 @@ gam_mod$bestTune
 gam_mod$finalModel
 
 summary(gam_mod)
+
+# test error 
+gam_pred = predict(gam_mod, newdata = x_test)
+gam_rmse = sqrt(mean((y_test - gam_pred)^2))
+
+cat("Test error for the linear model: ", gam_rmse, "\n")
 ```
 
 
@@ -164,7 +185,6 @@ summary(gam_mod)
 set.seed(1)
 resamp = resamples(list(lm = linear_mod, 
                         enet = enet_mod, 
-                        pcr = pcr_mod, 
                         pls = pls_mod,                         
                         MARS = mars_mod, 
                         GAM = gam_mod))
@@ -176,8 +196,9 @@ bwplot(resamp, metric = "RMSE")
 Generalization 
 ```{r}
 mars.pred = predict(mars_mod, newdata = test)
-pcr.pred = predict(pcr_mod,newdata = test)
-lda.pred <- predict(gam_mod, newdata = test)
+pcr.pred = predict(pcr_mod, newdata = test)
+lda.pred = predict(gam_mod, newdata = test)
+
 
 ```
 
