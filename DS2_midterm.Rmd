@@ -72,7 +72,9 @@ corrplot(cor(x), method = "circle", type = "full")
 
 Both the train data and the test data were loaded and separated into response variable and predictor variable matrices. Scatterplots were made for the numeric predictor variables and boxplots were made for the factor or binary variables. 
 
-Correlation plot was also checked and no multicolinearity was observed. 
+According to the scatterplots for `Systolic blood pressure (SBP)`, `LDL cholesterol (LDL)`, `Time since vaccination (time)`,  `Age (age)`, `Height (height)`, `Weight (weight)`, `BMI (bmi)`, they all indicate relatively linear relationship with the response variable `Log-transformed antibody level (log_antibody)`. Also, the boxplots indicate that the the factor and binary predictors show Gaussian characteristic. 
+Correlation plot was also checked and no strong multicolinearity was observed in the data. 
+
 
 
 ## Model training 
