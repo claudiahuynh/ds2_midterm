@@ -35,10 +35,13 @@ test = dat2 |>
   dplyr::select(-id)
 
 x_test = model.matrix(log_antibody ~ ., data = test)[, -1]
-y_test = train$log_antibody
+y_test = test$log_antibody
 
 # visualization of the train data 
-featurePlot(x = train[, -c(2,3,4,8,9, 13)], y = train$log_antibody, plot = "scatter")
+featurePlot(x = train[, -c(2,3,4,8,9, 13)], 
+            y = train$log_antibody, 
+            plot = "scatter", 
+            labels = c("Predictors", "Log_antibody"))
 
 # boxplot for factor/binary variables 
 p1 = ggplot(aes(x = factor(gender), y = log_antibody), data = train) + 
@@ -85,11 +88,11 @@ mean((y_test - pred_lm)^2)
 ```{r elastic net}
 # elastic net 
 set.seed(1)
-enet_mod = train(log_antibody ~ ., 
-                 data = train,
+enet_mod = train(x = x, 
+                 y = y, 
                  method = "glmnet", 
-                 tuneGrid = expand.grid(alpha = seq(0, 1, length = 21), 
-                                        lambda = exp(seq(6, 0, length = 100))),
+                 tuneGrid = expand.grid(alpha = seq(0, 1, length = 25), 
+                                        lambda = exp(seq(-2, 2, length = 100))),
                  trControl = ctrl1)
 
 enet_mod$bestTune
@@ -136,6 +139,9 @@ mars_mod = train(x = x,
                  trControl = ctrl1)
 
 summary(mars_mod)
+
+mars_pred = predict(mars_mod, newdata = x_test)
+mars_rmse = sqrt(mean((y_test - mars_pred)^2))
 ```
 
 ```{r}
@@ -169,7 +175,13 @@ bwplot(resamp, metric = "RMSE")
 ```
 
 
+Generalization 
+```{r}
+mars.pred = predict(mars_mod, newdata = test)
+pcr.pred = predict(pcr_mod,newdata = test)
+lda.pred <- predict(gam_mod, newdata = test)
 
+```
 
 ## Conclusion 
 
