@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: github_document
 ---
 
-```{r}
+```{r message = FALSE}
 library(tidyverse)
 library(MASS)
 library(caret)
@@ -92,7 +92,7 @@ summary(linear_mod)
 
 # test error 
 lm_pred = predict(linear_mod, newdata = x_test)
-lm_rmse = sqrt(mean((y_test - pred_lm)^2))
+lm_rmse = sqrt(mean((y_test - lm_pred)^2))
 
 cat("Test error for the linear model: ", lm_rmse, "\n")
 ```
@@ -135,7 +135,7 @@ summary(pls_mod)
 
 # test error 
 pls_pred = predict(pls_mod, newdata = x_test)
-pls_rmse = sqrt(mean((y_test - pred_pls)^2))
+pls_rmse = sqrt(mean((y_test - pls_pred)^2))
 
 cat("Test error for the linear model: ", pls_rmse, "\n")
 
@@ -194,15 +194,6 @@ summary(resamp)
 bwplot(resamp, metric = "RMSE")
 ```
 
-
-Generalization 
-```{r}
-mars.pred = predict(mars_mod, newdata = test)
-pcr.pred = predict(pcr_mod, newdata = test)
-lda.pred = predict(gam_mod, newdata = test)
-
-
-```
 
 ## Conclusion 
 
