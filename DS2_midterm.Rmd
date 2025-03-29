@@ -13,6 +13,7 @@ library(corrplot)
 library(mgcv)
 library(patchwork)
 library(ggplot2)
+library(gtsummary)
 ```
 
 ## Load Data
@@ -37,6 +38,8 @@ test = dat2 |>
 
 x_test = model.matrix(log_antibody ~ ., data = test)[, -1]
 y_test = test$log_antibody
+
+tbl_summary(train)
 
 # visualization of the train data 
 theme1 = trellis.par.get()
