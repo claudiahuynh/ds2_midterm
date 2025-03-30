@@ -2,7 +2,7 @@
 title: "DS2_midterm"
 author: "My An Huynh, Soomin You"
 date: "`r Sys.Date()`"
-output: github_document
+output: pdf_document
 ---
 
 ```{r message = FALSE}
@@ -23,8 +23,7 @@ load("data/dat2.RData")
 ```
 
 ## Summary Statistics 
-## Exploratory Data Analysis 
-```{r eda}
+```{r}
 #train data 
 train = dat1 |>
   dplyr::select(-id)
@@ -40,8 +39,31 @@ x_test = model.matrix(log_antibody ~ ., data = test)[, -1]
 y_test = test$log_antibody
 
 tbl_summary(train)
+```
 
-# visualization of the train data 
+Both the train data and the test data were loaded and separated into response variable and predictor variable matrices. A summary statistics table was made to summarize the mean and proportions of the train data. 
+
+\newpage
+
+The following is a brief explanation of the predictor variables and the response variable summarized in the table above. 
+
+* race (1 = White, 2 = Asian, 3 = Black, 4 = Hispanic)
+* gender (0 = Female, 1 = Male)
+* smoking levels (0 = non-smoker, 1 = former smoker, 2 = current smoker)
+* hypertension (0 = no hypertension, 1 = hypertension)
+* diabetes (0 = non-diabetic, 1 = diabetic)
+* SBP (systolic blood pressure in mmHg)
+* LDL (LDL cholesterol in mg/dL)
+* age (years)
+* height (cm)
+* weight (kg)
+* BMI (kg/m^2) 
+* time (time passed since vaccination in days). 
+* log_antibody (log transformed antibody level) 
+
+
+## Exploratory Data Analysis 
+```{r eda}
 theme1 = trellis.par.get()
 theme1$plot.symbol$col = rgb(.2, .4, .2, .5)
 theme1$plot.symbol$pch = 16
@@ -73,15 +95,15 @@ p1 + p2 + p3 + p4 + p5
 corrplot(cor(x), method = "circle", type = "full")
 ```
 
-Both the train data and the test data were loaded and separated into response variable and predictor variable matrices. Scatterplots were made for the numeric predictor variables and boxplots were made for the factor or binary variables. 
+Scatterplots were made for the numeric predictor variables and boxplots were made for the factor or binary variables. 
 
 According to the scatterplots for `Systolic blood pressure (SBP)`, `LDL cholesterol (LDL)`, `Time since vaccination (time)`,  `Age (age)`, `Height (height)`, `Weight (weight)`, `BMI (bmi)`, they all indicate relatively linear relationship with the response variable `Log-transformed antibody level (log_antibody)`. Also, the boxplots indicate that the the factor and binary predictors show Gaussian characteristic. 
+
 Correlation plot was also checked and no strong multicolinearity was observed in the data. 
 
 
-
 ## Model training 
-To find an optimal prediction model of antibody levels that show the impact of the demographic and clinical factors, we decide to build various models and compare. We use linear, elastic net, PLS, MARS and GAM models as shown below. 
+To find an optimal prediction model of antibody levels that show the impact of the demographic and clinical factors, we decided to build various models and compare. We used linear, elastic net, PLS, MARS and GAM models as shown below. 
 
 ```{r linear}
 #linear
@@ -123,7 +145,6 @@ cat("The optimal alpha for the elastic net model: ", best_lambda, "\n")
 cat("Test error for the linear model: ", enet_rmse, "\n")
 ```
 
-Maybe describe how we determined the tuning grid range for lambda...? 
 
 ```{r pls}
 # pls model
@@ -160,7 +181,12 @@ mars_pred = predict(mars_mod, newdata = x_test)
 mars_rmse = sqrt(mean((y_test - mars_pred)^2))
 
 cat("Test error for the linear model: ", mars_rmse, "\n")
+
+pdp::partial(mars_mod, pred.var = c("bmi"), grid.resolution = 10) |>
+  autoplot()
 ```
+
+To better understand the relationship, partial dependence plot (PDP) for BMI predictor variable and the response variable was plotted. 
 
 ```{r}
 # gam  
@@ -183,9 +209,8 @@ cat("Test error for the linear model: ", gam_rmse, "\n")
 ```
 
 
-
 ## Model validation 
-6) comparison 
+
 ```{r}
 set.seed(1)
 resamp = resamples(list(lm = linear_mod, 
@@ -197,7 +222,6 @@ summary(resamp)
 bwplot(resamp, metric = "RMSE")
 ```
 
+According to the model comparison via 10-fold cross validation, the mean RMSE of the MARS model is the lowest for this specific dataset and predefined seed. Hence, MARS is chosen as the final model to predict the relationship between log-transformed antibody levels and the predictors of interest. Also, MARS offers better interpretability. 
 
-## Conclusion 
 
-our best model is MARS since it has the lowest mean RMSE value. 
