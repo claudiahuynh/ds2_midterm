@@ -22,26 +22,18 @@ load("data/dat1.RData")
 load("data/dat2.RData")
 ```
 
-## Summary Statistics 
-```{r}
-#train data 
+## Train Data Summary Statistics 
+```{r train_data}
 train = dat1 |>
   dplyr::select(-id)
 
 x = model.matrix(log_antibody ~ ., data = train)[, -1]
 y = train$log_antibody
 
-#test data 
-test = dat2 |> 
-  dplyr::select(-id)
-
-x_test = model.matrix(log_antibody ~ ., data = test)[, -1]
-y_test = test$log_antibody
-
 tbl_summary(train)
 ```
 
-Both the train data and the test data were loaded and separated into response variable and predictor variable matrices. A summary statistics table was made to summarize the mean and proportions of the train data. 
+First, the train data was loaded and separated into predictor variable matrix and response variable vector. A summary statistics table was made to summarize the mean and proportions of the variables in the train data. 
 
 \newpage
 
@@ -62,7 +54,7 @@ The following is a brief explanation of the predictor variables and the response
 * log_antibody (log transformed antibody level) 
 
 
-## Exploratory Data Analysis 
+## Train Data Exploratory Data Analysis 
 ```{r eda}
 theme1 = trellis.par.get()
 theme1$plot.symbol$col = rgb(.2, .4, .2, .5)
@@ -93,13 +85,55 @@ p5 = ggplot(aes(x = factor(smoking), y = log_antibody), data = train) +
 p1 + p2 + p3 + p4 + p5
 
 corrplot(cor(x), method = "circle", type = "full")
+corrplot(cor(x), method = "number", type = "full")
 ```
 
-Scatterplots were made for the numeric predictor variables and boxplots were made for the factor or binary variables. 
+Then, the visualization of the train data was checked. Scatterplots were made for the numeric predictor variables and boxplots were made for the factor or binary variables. 
 
-According to the scatterplots for `Systolic blood pressure (SBP)`, `LDL cholesterol (LDL)`, `Time since vaccination (time)`,  `Age (age)`, `Height (height)`, `Weight (weight)`, `BMI (bmi)`, they all indicate relatively linear relationship with the response variable `Log-transformed antibody level (log_antibody)`. Also, the boxplots indicate that the the factor and binary predictors show Gaussian characteristic. 
+According to the scatterplots for `Systolic blood pressure (SBP)`, `LDL cholesterol (LDL)`, `Time since vaccination (time)`,  `Age (age)`, `Height (height)`, `Weight (weight)`, `BMI (bmi)`, these variables indicate relatively linear relationship with the response variable `Log-transformed antibody level (log_antibody)`. Also, the boxplots indicate that the the factor and binary predictors show Gaussian characteristic. 
 
-Correlation plot was also checked and no strong multicolinearity was observed in the data. 
+Correlation plot was also checked for the train data and no strong multicolinearity was observed. 
+
+
+## Test Data 
+Then, the exploratory analysis was performed for the independent test data that has the same structure as the train data. 
+
+```{r test_data}
+test = dat2 |> 
+  dplyr::select(-id)
+
+x_test = model.matrix(log_antibody ~ ., data = test)[, -1]
+y_test = test$log_antibody
+
+tbl_summary(test)
+```
+
+\newpage
+
+```{r}
+featurePlot(x = test[, -c(2,3,4,8,9,13)], 
+            y = y_test, 
+            plot = "scatter", 
+            span = 0.5,
+            type = c("p", "smooth"), 
+            labels = c("Predictors", "Log_antibody"))
+
+p1_test = ggplot(aes(x = factor(gender), y = log_antibody), data = test) + 
+  geom_boxplot() 
+p2_test = ggplot(aes(x = factor(race), y = log_antibody), data = test) + 
+  geom_boxplot()
+p3_test = ggplot(aes(x = factor(diabetes), y = log_antibody), data = test) + 
+  geom_boxplot()
+p4_test = ggplot(aes(x = factor(hypertension), y = log_antibody), data = test) + 
+  geom_boxplot()
+p5_test = ggplot(aes(x = factor(smoking), y = log_antibody), data = test) + 
+  geom_boxplot()
+p1_test + p2_test + p3_test + p4_test + p5_test
+
+corrplot(cor(x_test), method = "circle", type = "full")
+```
+
+According to the summary statistics and visualization plots, it was be confirmed that the structure of the test data is similar to that of the train data. 
 
 
 ## Model training 
@@ -166,6 +200,7 @@ cat("Test error for the linear model: ", pls_rmse, "\n")
 ggplot(pls_mod, highlight = TRUE)
 ```
 
+
 ```{r}
 # mars
 set.seed(1)
@@ -210,6 +245,7 @@ cat("Test error for the linear model: ", gam_rmse, "\n")
 
 
 ## Model validation 
+To evaluate the robustness and generalizability of the prediction model using the new dataset, test data, the five fitted models were compared using resampling. 
 
 ```{r}
 set.seed(1)
